@@ -5,3 +5,4 @@ numpy==1.23.1
 plotly
 scipy
 hydralit_components
+pandas_datareader
