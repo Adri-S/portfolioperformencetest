@@ -1,7 +1,7 @@
 streamlit
 pandas
 yfinance
-numpy
+numpy==1.23.1
 plotly
 scipy
 hydralit_components
