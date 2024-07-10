@@ -7,3 +7,4 @@ scipy
 hydralit_components
 pandas_datareader
 streamlit_option_menu
+matplotlib.pyplot
