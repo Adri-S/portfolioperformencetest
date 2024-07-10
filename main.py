@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import importlib.util
+import numpy as np
 from hydralit_components import HyLoader, Loaders  # Überprüfen, ob der Import korrekt ist
 
 st.set_page_config(
