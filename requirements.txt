@@ -1,0 +1,7 @@
+streamlit
+pandas
+yfinance
+numpy
+plotly
+scipy
+hydralit_components
