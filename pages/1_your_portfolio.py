@@ -134,8 +134,8 @@ def update_initial_weights():
 # Initialize session state for the stock list
 if 'stocks' not in st.session_state:
     # Pre-filled values for the portfolio
-    initial_stocks = ["AAPL", "AMZN", "MSFT", "NVDA", "GOOGL", "META"]
-    initial_quantities = [3, 4, 10, 16, 23, 47]
+    initial_stocks = ["AAPL", "AMZN", "MSFT", "NVDA"]
+    initial_quantities = [3, 4, 3, 2]
     st.session_state.initial_date = datetime.date(2023, 7, 30)  # Store initial date in session state
 
     # Fetch initial prices and current prices
@@ -426,15 +426,12 @@ for single_portfolio in range(num_portfolios):
     weights = np.random.random(num_assets)
     weights /= np.sum(weights)
     volatility = np.sqrt(np.dot(weights.T, np.dot(cov_annual, weights)))
-
-    # Implementing the volatility constraint
-    if volatility <= fixed_volatility*1.001:
-        returns = np.dot(weights, returns_annual)
-        sharpe = returns / volatility
-        sharpe_ratio.append(sharpe)
-        port_returns.append(returns)
-        port_volatility.append(volatility)
-        stock_weights.append(weights)
+    returns = np.dot(weights, returns_annual)
+    sharpe = returns / volatility
+    sharpe_ratio.append(sharpe)
+    port_returns.append(returns)
+    port_volatility.append(volatility)
+    stock_weights.append(weights)
 
 # a dictionary for Returns and Risk values of each portfolio
 portfolio = {'Returns': port_returns,
@@ -504,7 +501,7 @@ st.session_state.mc_lowret = lowest_vol_same_return[0]
 
 # Find the portfolio with the highest expected return for the closest level of volatility to the fixed weight portfolio
 for i, (ret, vol) in enumerate(zip(target_returns, efficient_volatilities)):
-    if ret > fixed_return and vol <= fixed_volatility:
+    if ret >= fixed_return and vol <= fixed_volatility:
         highest_return = ret
         highest_return_same_vol = (ret, vol, efficient_weights[i])
 st.session_state.mc_higretsamvol = highest_return_same_vol
