@@ -448,6 +448,7 @@ with st.container():
             'Last Quarter': (end_date - datetime.timedelta(days=90), end_date),
             'Year to Date': (datetime.date(datetime.datetime.now().year, 1, 1), end_date),
         }
+        initial_period = 'Last 5 Years'
         
         # Fetch data for all periods
         market_data = {}
@@ -456,18 +457,55 @@ with st.container():
             data.reset_index(inplace=True)
             market_data[period] = data
         
+        stock = yf.Ticker(ticker_input)
+        hist_5y = stock.history(period="5y")
+        hist_5y.reset_index(inplace=True)
+        hist_5y['Dividends'] = hist_5y['Dividends'].fillna(0)
+        adj_dividends_5y = hist_5y['Dividends'].cumsum()
+        dividends_5y = market_data['Last 5 Years']['Close'] + adj_dividends_5y
+
+        hist_1y = stock.history(period="1y")
+        hist_1y.reset_index(inplace=True)
+        hist_1y['Dividends'] = hist_1y['Dividends'].fillna(0)
+        adj_dividends_1y = hist_1y['Dividends'].cumsum()
+        dividends_1y = market_data['Last Year']['Close'] + adj_dividends_1y
+
+        hist_1q = stock.history(period="3mo")
+        hist_1q.reset_index(inplace=True)
+        hist_1q['Dividends'] = hist_1q['Dividends'].fillna(0)
+        adj_dividends_1q = hist_1q['Dividends'].cumsum()
+        dividends_1q = market_data['Last Quarter']['Close'] + adj_dividends_1q
+
+        hist_ytd = stock.history(period="YTD")
+        hist_ytd.reset_index(inplace=True)
+        hist_ytd['Dividends'] = hist_ytd['Dividends'].fillna(0)
+        adj_dividends_ytd = hist_ytd['Dividends'].cumsum()
+        dividends_ytd = market_data['Year to Date']['Close'] + adj_dividends_ytd
+        
         # Create Plotly figure
         fig_market_performance = go.Figure()
+
+        fig_market_performance.add_trace(go.Scatter(
+            name=f'{ticker_input} with reinvested dividends',
+            line=dict(color='#62BD7D', width=2.5, simplify=True),
+            marker_color='#62BD7D',
+            x=market_data[initial_period]['Date'],
+            y=dividends_5y,
+            mode='lines',
+            legendrank=2,
+            visible="legendonly",
+        ))
         
         # Add a trace for the initial view (e.g., Last Year)
-        initial_period = 'Last 5 Years'
+
         fig_market_performance.add_trace(go.Scatter(
             name=ticker_input,
             line=dict(color='orange', width=2.5, simplify=True),
             marker_color='orange',
             x=market_data[initial_period]['Date'],
             y=market_data[initial_period]['Close'],
-            mode='lines'
+            mode='lines',
+            legendrank=1,
         ))
 
         # Update layout with updatemenus for period selection
@@ -478,14 +516,13 @@ with st.container():
             height=400,
             paper_bgcolor=st.session_state.chart_bgcolor,
             plot_bgcolor='rgba(0,0,0,0)',
-            showlegend=False,
             updatemenus=[
                 dict(
                     buttons=[
                         dict(
                             args=[{
                                 'x': [market_data['Last 5 Years']['Date']],
-                                'y': [market_data['Last 5 Years']['Close']]
+                                'y': [dividends_5y, market_data['Last 5 Years']['Close']]
                             }],
                             label='Last 5 years',
                             method='update'
@@ -493,7 +530,7 @@ with st.container():
                         dict(
                             args=[{
                                 'x': [market_data['Last Year']['Date']],
-                                'y': [market_data['Last Year']['Close']]
+                                'y': [dividends_1y, market_data['Last Year']['Close']]
                             }],
                             label='Last Year',
                             method='update',
@@ -501,7 +538,7 @@ with st.container():
                         dict(
                             args=[{
                                 'x': [market_data['Last Quarter']['Date']],
-                                'y': [market_data['Last Quarter']['Close']]
+                                'y': [dividends_1q, market_data['Last Quarter']['Close']]
                             }],
                             label='Last Quarter',
                             method='update'
@@ -509,7 +546,7 @@ with st.container():
                         dict(
                             args=[{
                                 'x': [market_data['Year to Date']['Date']],
-                                'y': [market_data['Year to Date']['Close']]
+                                'y': [dividends_ytd, market_data['Year to Date']['Close']]
                             }],
                             label='YTD',
                             method='update'
@@ -527,7 +564,10 @@ with st.container():
                     yanchor='top',
 #                    type="buttons",
                 )
-            ]
+            ],
+            showlegend=True,
+            legend_font_color=st.session_state.text_color,
+            legend=dict(x=0.45, xanchor='center', y=-0.1, orientation='h', itemwidth=30, indentation=60),
         )
 
         # Display the Plotly chart in Streamlit
