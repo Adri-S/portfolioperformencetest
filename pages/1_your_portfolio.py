@@ -409,7 +409,7 @@ stock_weights = []
 
 # set the number of combinations for imaginary portfolios
 num_assets = len(selected)
-num_portfolios = 500000
+num_portfolios = 50000
 
 # Calculate the returns and volatility for the fixed weight portfolio
 fixed_weights = np.array(mc_initial_weights)
