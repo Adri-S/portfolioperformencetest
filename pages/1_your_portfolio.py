@@ -134,7 +134,7 @@ def update_initial_weights():
 # Initialize session state for the stock list
 if 'stocks' not in st.session_state:
     # Pre-filled values for the portfolio
-    initial_stocks = ["AAPL", "AMZN", "MSFT", "NVDA"]
+    initial_stocks = ["AAPL", "AMZN", "MSFT", "NVDA", "GOOGL", "META"]
     initial_quantities = [3, 4, 10, 16, 23, 47]
     st.session_state.initial_date = datetime.date(2023, 7, 30)  # Store initial date in session state
 
