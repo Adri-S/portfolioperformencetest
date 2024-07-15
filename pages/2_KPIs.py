@@ -148,25 +148,10 @@ portfolio_data_harmonized = total_volume / total_volume.iloc[0] * 100 # Normaliz
 portfolio_annual_return = (total_volume.iloc[-1] - total_volume.iloc[0]) / total_volume.iloc[0] * 100
 portfolio_returns_daily = total_volume.pct_change()
 portfolio_vola = portfolio_returns_daily.var()
-portfolio_sharpe_ratio = (portfolio_returns_daily.mean() - st.session_state.risk_free_daily_rate) / np.sqrt(portfolio_vola) * 252 ** 0.5
+#portfolio_sharpe_ratio = (portfolio_returns_daily.mean() - st.session_state.risk_free_daily_rate) / np.sqrt(portfolio_vola) * 252 ** 0.5
+portfolio_sharpe_ratio = (st.session_state.mc_fixret - st.session_state.risk_free_rate/100) / st.session_state.mc_fixvol
 portfolio_sharpe = total_volume ** portfolio_sharpe_ratio
 portfolio_data_sharpe = portfolio_sharpe / portfolio_sharpe.iloc[0] * 100
-
-def get_dividends(ticker):
-    stock = yf.Ticker(ticker)
-    dividends = stock.dividends
-    return dividends
-
-def total_return_with_reinvestment(df):
-    """
-    Calculate the "Total Return" of a stock when dividends are
-    reinvested in the stock.
-    """
-    df['Dividends'] = df['Dividends'].fillna(0)
-    tot_ret_daily = (df['Dividends'] + df['Close']) / df['Close'].shift(1)
-    tot_ret = tot_ret_daily.cumprod()
-    tot_ret.iloc[0] = 1.0
-    return tot_ret
 
 portfolio_df = pd.DataFrame({
     "Stock": st.session_state.stocks,
@@ -447,23 +432,11 @@ with st.container():
 
     with sharpe_loss:
         # Set start date as the purchase date of the stocks
-        start_date = datetime.datetime.today() - datetime.timedelta(days=365)
+        start_date = datetime.datetime.today()- datetime.timedelta(days=365)
         end_date = datetime.datetime.now().date()
 
         # Fetch historical data for selected stocks
         data = yf.download(st.session_state.stocks, start=start_date, end=end_date)['Adj Close']
-        total_returns_reinvested = pd.DataFrame()
-
-        for stock in st.session_state.stocks:
-            hist = yf.Ticker(stock).history(start=start_date, end=end_date)
-            hist['Dividends'] = get_dividends(stock)
-            total_return_reinvested = total_return_with_reinvestment(hist)
-            total_returns_reinvested[stock] = total_return_reinvested
-
-        # Calculate the portfolio's total return by weighting each stock's total return
-        weighted_total_return = total_returns_reinvested.multiply(st.session_state.quantities, axis=1)
-        portfolio_total_return_reinvested = weighted_total_return.sum(axis=1)
-        portfolio_total_return_reinvested_harmonized = portfolio_total_return_reinvested / portfolio_total_return_reinvested.iloc[0] * 100
 
         # Calculate daily returns
         returns_daily = data.pct_change()
@@ -540,7 +513,7 @@ with st.container():
         fig_portfolio_consumption.add_trace(go.Pie(
             values=st.session_state.weights,
             labels=st.session_state.stocks,
-            marker_colors=['#1565c0', '#1976d2', '#1e88e5', '#2196f3', '#42a5f5', '#64b5f6']),
+            marker_colors=['#1976d2', '#1e88e5', '#2196f3', '#42a5f5', '#64b5f6', '#90caf9', '#bbdefb', '#e3f2fd']),
             row=1, col=1,
         )
         
@@ -548,14 +521,14 @@ with st.container():
         fig_portfolio_consumption.add_trace(go.Pie(
             values=st.session_state.weights_minvar,
             labels=st.session_state.stocks,
-            marker_colors=['#469d89', '#56ab91', '#67b99a', '#78c6a3', '#88d4ab', '#99e2b4']),
+            marker_colors=['#248277', '#358f80', '#469d89', '#56ab91', '#67b99a', '#78c6a3', '#88d4ab', '#99e2b4']),
             row=1, col=2,
         )
 
         fig_portfolio_consumption.add_trace(go.Pie(
             values=st.session_state.weights_highret,
             labels=st.session_state.stocks,
-            marker_colors=['#f4762d', '#f6863d', '#f8964c', '#faa75c', '#fbb76b', '#fdc77b']),
+            marker_colors=['#ff6000', '#ff6d00', '#ff7900', '#ff8500', '#ff9100', '#ff9e00', '#ffaa00', '#ffb600']),
             row=1, col=3,
         )
 
@@ -633,27 +606,15 @@ with st.container():
         ))
 
         # Add Fixed Weight Portfolio trace
-        #fig_performance.add_trace(go.Scatter(
-        #    x=portfolio_data_harmonized.index,
-        #    y=portfolio_data_harmonized,
-        #    mode='lines',
-        #    name='Your Portfolio',
-        #    line=dict(color='cornflowerblue'),
-        #    line_width=3,
-        #    legendrank=1,
-        #))
-        
-        # Add Fixed Weight Portfolio trace with total return data
         fig_performance.add_trace(go.Scatter(
-            x=portfolio_total_return_reinvested_harmonized.index,
-            y=portfolio_total_return_reinvested_harmonized,
+            x=portfolio_data_harmonized.index,
+            y=portfolio_data_harmonized,
             mode='lines',
             name='Your Portfolio',
-            line=dict(color='pink'),
+            line=dict(color='cornflowerblue'),
             line_width=3,
             legendrank=1,
         ))
-
 
         # Update layout
         fig_performance.update_layout(
@@ -729,7 +690,7 @@ with st.container():
             name='Portfolios',
             opacity=1,
             showlegend=False,
-            #hoverinfo='skip',
+            hoverinfo='skip',
         ))
 
         # Efficient Frontier
@@ -740,6 +701,20 @@ with st.container():
             name='Efficient Frontier',
             showlegend=False,
             hoverinfo='skip',
+        ))
+
+        # Minimum Variance Portfolio
+        fig_monte_carlo.add_trace(go.Scatter(
+            x=[st.session_state.mc_minvol], y=[st.session_state.mc_minret],
+            mode='markers',
+            marker=dict(
+                color=st.session_state.text_color,
+                size=20,
+                line_width=5,
+                symbol='x-thin-open'
+            ),
+            name='Minimum Variance Portfolio',
+            legendrank=4,
         ))
 
         # Your Portfolio
@@ -785,20 +760,6 @@ with st.container():
             legendrank=3,
         ))
 
-        # Minimum Variance Portfolio
-        fig_monte_carlo.add_trace(go.Scatter(
-            x=[st.session_state.mc_minvol], y=[st.session_state.mc_minret],
-            mode='markers',
-            marker=dict(
-                color=st.session_state.text_color,
-                size=20,
-                line_width=5,
-                symbol='x-thin-open'
-            ),
-            name='Minimum Variance Portfolio',
-            legendrank=4,
-        ))
-
         # Update layout
         fig_monte_carlo.update_layout(
             xaxis_title='Volatility (Std. Deviation)',
@@ -824,4 +785,4 @@ with st.container():
         )
 
         # Display the plot in Streamlit
-        st.plotly_chart(fig_monte_carlo)#, config={'displayModeBar': False})
+        st.plotly_chart(fig_monte_carlo, config={'displayModeBar': False})
